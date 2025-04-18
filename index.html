@@ -1,0 +1,128 @@
+<!-- ... Bagian HTML kamu tetap, sampai ke script paling akhir -->
+<script>
+  // Firebase Config (pastikan udah ada di file lo sebelumnya)
+  const firebaseConfig = {
+    apiKey: "API_KEY_KAMU",
+    authDomain: "fikstore-id.firebaseapp.com",
+    projectId: "fikstore-id",
+    storageBucket: "fikstore-id.appspot.com",
+    messagingSenderId: "YOUR_MSG_ID",
+    appId: "YOUR_APP_ID",
+    databaseURL: "https://fikstore-id-default-rtdb.firebaseio.com/"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+
+  let produkDipilih = "";
+  let perluPilihPaket = false;
+  let paketTerpilih = "";
+
+  window.addEventListener("load", function () {
+    document.getElementById("loading-spinner").style.display = "none";
+  });
+
+  function showCheckout(namaProduk, butuhPaket) {
+    document.getElementById("checkout").style.display = "block";
+    document.getElementById("produk-terpilih").innerText = "Produk: " + namaProduk;
+    produkDipilih = namaProduk;
+    perluPilihPaket = butuhPaket;
+
+    document.getElementById("paket").style.display = butuhPaket ? "block" : "none";
+    document.getElementById("paket").value = "";
+    document.getElementById("metode-section").style.display = butuhPaket ? "none" : "block";
+    document.getElementById("qris-img").style.display = "none";
+    document.getElementById("download-qris").style.display = "none";
+    document.getElementById("nomor-tujuan").style.display = "none";
+    document.getElementById("total-pembayaran").innerText = !butuhPaket && namaProduk.includes("Admin Panel") ? "Total Pembayaran: Rp15.000"
+      : !butuhPaket && namaProduk.includes("Reseller") ? "Total Pembayaran: Rp10.000"
+      : "";
+
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  }
+
+  function tampilPaket() {
+    const paket = document.getElementById("paket").value;
+    paketTerpilih = paket;
+    const total = document.getElementById("total-pembayaran");
+
+    if (paket !== "") {
+      produkDipilih = "Bot WhatsApp - " + paket;
+      document.getElementById("metode-section").style.display = "block";
+      total.innerText = "Total Pembayaran: " + paket.split(" - ")[1];
+    } else {
+      document.getElementById("metode-section").style.display = "none";
+      total.innerText = "";
+    }
+  }
+
+  function tampilMetode() {
+    const metode = document.getElementById("metode").value;
+    const qrisImg = document.getElementById("qris-img");
+    const qrisLink = document.getElementById("qris-link");
+
+    let qrFile = "";
+
+    if (produkDipilih.includes("5GB")) qrFile = "qr1.png";
+    else if (produkDipilih.includes("6GB")) qrFile = "qr2.png";
+    else if (produkDipilih.includes("7GB")) qrFile = "qr3.png";
+    else if (produkDipilih.includes("8GB")) qrFile = "qr4.png";
+    else if (produkDipilih.includes("9GB")) qrFile = "qr5.png";
+    else if (produkDipilih.includes("10GB")) qrFile = "qr6.png";
+    else if (produkDipilih.includes("Unlimited")) qrFile = "qr7.png";
+    else if (produkDipilih.includes("Admin Panel")) qrFile = "qr_admin.png";
+    else if (produkDipilih.includes("Reseller")) qrFile = "qr_reseller.png";
+
+    if (metode === "qris") {
+      qrisImg.src = qrFile;
+      qrisImg.style.display = "block";
+      qrisLink.href = qrFile;
+      document.getElementById("download-qris").style.display = "block";
+    } else {
+      qrisImg.style.display = "none";
+      document.getElementById("download-qris").style.display = "none";
+    }
+
+    document.getElementById("nomor-tujuan").style.display = (metode === "dana" || metode === "gopay") ? "block" : "none";
+  }
+
+  async function kirimWhatsApp() {
+    const spinner = document.getElementById("loading-spinner");
+    spinner.style.display = "flex";
+
+    const nama = document.getElementById("nama").value;
+    const nomor = document.getElementById("nomor").value;
+    const metode = document.getElementById("metode").value;
+    const bukti = document.getElementById("bukti").files[0];
+
+    if (!nama || !nomor || !metode || !bukti) {
+      spinner.style.display = "none";
+      alert("Dimohon untuk isi semua data dan unggah bukti transfer.");
+      return;
+    }
+
+    try {
+      const storageRef = firebase.storage().ref(`bukti/${Date.now()}_${bukti.name}`);
+      await storageRef.put(bukti);
+      const url = await storageRef.getDownloadURL();
+
+      const dbRef = firebase.database().ref("transaksi");
+      const transaksiBaru = {
+        nama,
+        nomor,
+        produk: produkDipilih,
+        metode,
+        bukti_url: url,
+        waktu: new Date().toISOString()
+      };
+      await dbRef.push(transaksiBaru);
+
+      spinner.style.display = "none";
+      alert("Bukti berhasil dikirim! Admin akan memproses pesanan kamu.");
+      document.getElementById("checkout").style.display = "none";
+    } catch (err) {
+      spinner.style.display = "none";
+      alert("Gagal mengirim bukti. Coba lagi nanti.");
+      console.error(err);
+    }
+  }
+      </script>
