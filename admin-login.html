@@ -1,30 +1,39 @@
-<!DOCTYPE html>
-<html>
+<!-- admin-login.html --><!DOCTYPE html><html lang="en">
 <head>
-  <title>Login Admin</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login</title>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";const firebaseConfig = {
+  apiKey: "AIzaSyC5aNVM7c2eUd5P-0k8jZCKhgBNWFcKO-c",
+  authDomain: "fikstore-id.firebaseapp.com",
+  projectId: "fikstore-id",
+  storageBucket: "fikstore-id.firebasestorage.app",
+  messagingSenderId: "323293742570",
+  appId: "1:323293742570:web:5de4906939fd19d6ec9e93"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+window.loginAdmin = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    window.location.href = "admin-dashboard.html";
+  } catch (error) {
+    alert("Login gagal: " + error.message);
+  }
+};
+
+  </script>
 </head>
 <body>
-  <h2>Login Admin</h2>
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password">
-  <button onclick="login()">Login</button>
-
-  <script src="firebase-app.js"></script>
-  <script src="firebase-auth.js"></script>
-  <script src="firebase-config.js"></script>
-  <script>
-    function login() {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-
-      firebase.auth().signInWithEmailAndPassword(email, password)
-        .then(() => {
-          window.location.href = 'admin-dashboard.html';
-        })
-        .catch(error => {
-          alert("Login gagal: " + error.message);
-        });
-    }
-  </script>
+  <h2>Admin Login</h2>
+  <input type="email" id="email" placeholder="Email"><br>
+  <input type="password" id="password" placeholder="Password"><br>
+  <button onclick="loginAdmin()">Login</button>
 </body>
-</html>
+</html><!-- admin-dashboard.html (next file I'll add) -->
