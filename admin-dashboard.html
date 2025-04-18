@@ -1,91 +1,137 @@
-<!DOCTYPE html><html>
+<!DOCTYPE html>
+<html lang="id">
 <head>
-  <title>FIK STORE - Admin Dashboard</title>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js";
-    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-database.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-auth.js";const firebaseConfig = {
-  apiKey: "AIzaSyC5aNVM7c2eUd5P-0k8jZCKhgBNWFcKO-c",
-  authDomain: "fikstore-id.firebaseapp.com",
-  projectId: "fikstore-id",
-  databaseURL: "https://fikstore-id-default-rtdb.firebaseio.com",
-  storageBucket: "fikstore-id.appspot.com",
-  messagingSenderId: "323293742570",
-  appId: "1:323293742570:web:5de4906939fd19d6ec9e93"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth();
-const database = getDatabase(app);
-
-const transaksiTable = document.getElementById("transaksiTableBody");
-const statusLogin = document.getElementById("statusLogin");
-
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    alert("Kamu belum login. Arahkan ke halaman login.");
-    window.location.href = "admin-login.html";
-  } else {
-    statusLogin.innerText = "Login sebagai: " + user.email;
-    loadTransaksi();
-  }
-});
-
-function loadTransaksi() {
-  const transaksiRef = ref(database, 'transaksi');
-  onValue(transaksiRef, (snapshot) => {
-    transaksiTable.innerHTML = "";
-    snapshot.forEach((childSnapshot) => {
-      const data = childSnapshot.val();
-      const key = childSnapshot.key;
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${data.nama}</td>
-        <td>${data.nomor}</td>
-        <td>${data.produk}</td>
-        <td>${data.metode}</td>
-        <td><img src="${data.bukti}" width="50" /></td>
-        <td><button onclick="hapusTransaksi('${key}')">Hapus</button></td>
-      `;
-      transaksiTable.appendChild(row);
-    });
-  });
-}
-
-window.hapusTransaksi = function(id) {
-  if (confirm("Yakin ingin menghapus transaksi ini?")) {
-    remove(ref(database, 'transaksi/' + id));
-  }
-}
-
-window.logout = function() {
-  signOut(auth).then(() => {
-    window.location.href = "admin-login.html";
-  });
-}
-
-  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - FIK STORE</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      background-color: #f0f2f5;
+    }
+    header {
+      background-color: #3b82f6;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: 600;
+    }
+    main {
+      padding: 20px;
+    }
+    .table-container {
+      overflow-x: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    th {
+      background-color: #f3f4f6;
+    }
+    .btn {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-delete {
+      background-color: #ef4444;
+      color: white;
+    }
+    .btn-edit {
+      background-color: #f59e0b;
+      color: white;
+      margin-right: 5px;
+    }
+  </style>
 </head>
 <body>
-  <h2>FIK STORE - Admin Dashboard</h2>
-  <p id="statusLogin">Memeriksa status login...</p>
-  <button onclick="logout()">Logout</button>
-  <table border="1" cellspacing="0" cellpadding="5">
-    <thead>
-      <tr>
-        <th>Nama</th>
-        <th>Nomor</th>
-        <th>Produk</th>
-        <th>Metode</th>
-        <th>Bukti</th>
-        <th>Aksi</th>
-      </tr>
-    </thead>
-    <tbody id="transaksiTableBody">
-      <!-- Isi transaksi -->
-    </tbody>
-  </table>
+  <header>Dashboard Admin - FIK STORE</header>
+  <main>
+    <div class="table-container">
+      <h2>Data Transaksi</h2>
+      <table id="transactionTable">
+        <thead>
+          <tr>
+            <th>Nama</th>
+            <th>Nomor WA</th>
+            <th>Produk</th>
+            <th>Tanggal</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Isi data transaksi -->
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC5aNVM7c2eUd5P-0k8jZCKhgBNWFcKO-c",
+      authDomain: "fikstore-id.firebaseapp.com",
+      projectId: "fikstore-id",
+      storageBucket: "fikstore-id.firebasestorage.app",
+      messagingSenderId: "323293742570",
+      appId: "1:323293742570:web:5de4906939fd19d6ec9e93",
+      databaseURL: "https://fikstore-id-default-rtdb.firebaseio.com"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const dataRef = ref(db, 'transaksi');
+
+    const tableBody = document.querySelector("#transactionTable tbody");
+
+    onValue(dataRef, (snapshot) => {
+      tableBody.innerHTML = "";
+      snapshot.forEach((childSnapshot) => {
+        const data = childSnapshot.val();
+        const key = childSnapshot.key;
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${data.nama}</td>
+          <td>${data.nomor}</td>
+          <td>${data.produk}</td>
+          <td>${data.tanggal}</td>
+          <td>
+            <button class="btn btn-edit" onclick="editData('${key}')">Edit</button>
+            <button class="btn btn-delete" onclick="deleteData('${key}')">Hapus</button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+    });
+
+    window.deleteData = function (id) {
+      const dataRef = ref(db, 'transaksi/' + id);
+      if (confirm("Yakin mau hapus data ini?")) {
+        remove(dataRef);
+      }
+    }
+
+    window.editData = function (id) {
+      alert("Fitur edit belum dibuat. ID data: " + id);
+    }
+  </script>
 </body>
 </html>
