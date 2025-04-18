@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard Admin - FIK STORE</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+
+  <div class="max-w-5xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6 text-center">Dashboard Admin - FIK STORE</h1>
+
+    <!-- Produk Section -->
+    <div class="bg-white p-4 rounded-lg shadow mb-8">
+      <h2 class="text-xl font-semibold mb-2">Manajemen Produk</h2>
+      <form id="productForm" class="flex flex-wrap gap-2">
+        <input type="text" id="productName" placeholder="Nama Produk" class="border p-2 rounded w-full sm:w-auto" required>
+        <input type="number" id="productPrice" placeholder="Harga" class="border p-2 rounded w-full sm:w-auto" required>
+        <input type="text" id="productDesc" placeholder="Deskripsi" class="border p-2 rounded w-full sm:w-auto">
+        <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Tambah Produk</button>
+      </form>
+      <div id="productList" class="mt-4 space-y-2"></div>
+    </div>
+
+    <!-- Transaksi Section -->
+    <div class="bg-white p-4 rounded-lg shadow">
+      <h2 class="text-xl font-semibold mb-2">Daftar Transaksi</h2>
+      <div id="transactionList" class="space-y-4"></div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    // Import Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js";
+    import { getDatabase, ref as dbRef, onValue, update } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
+    import { getStorage, ref as storageRef, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC5aNVM7c2eUd5P-0k8jZCKhgBNWFcKO-c",
+      authDomain: "fikstore-id.firebaseapp.com",
+      projectId: "fikstore-id",
+      storageBucket: "fikstore-id.firebasestorage.app",
+      messagingSenderId: "323293742570",
+      appId: "1:323293742570:web:5de4906939fd19d6ec9e93"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const rtdb = getDatabase(app);
+    const storage = getStorage(app);
+
+    // === Produk Logic ===
+    const productForm = document.getElementById('productForm');
+    const productList = document.getElementById('productList');
+
+    productForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = productForm.productName.value;
+      const price = parseInt(productForm.productPrice.value);
+      const desc = productForm.productDesc.value;
+
+      await addDoc(collection(db, "products"), { name, price, desc });
+      productForm.reset();
+      loadProducts();
+    });
+
+    async function loadProducts() {
+      productList.innerHTML = "";
+      const querySnapshot = await getDocs(collection(db, "products"));
+      querySnapshot.forEach(docSnap => {
+        const p = docSnap.data();
+        const div = document.createElement('div');
+        div.className = "border p-2 rounded flex justify-between items-center";
+        div.innerHTML = `
+          <div>
+            <strong>${p.name}</strong> - Rp${p.price}<br>
+            <small>${p.desc || ''}</small>
+          </div>
+          <div>
+            <button onclick="editProduct('${docSnap.id}', '${p.name}', ${p.price}, '${p.desc}')" class="text-blue-500 mr-2">Edit</button>
+            <button onclick="deleteProduct('${docSnap.id}')" class="text-red-500">Hapus</button>
+          </div>
+        `;
+        productList.appendChild(div);
+      });
+    }
+
+    window.deleteProduct = async (id) => {
+      if (confirm("Hapus produk ini?")) {
+        await deleteDoc(doc(db, "products", id));
+        loadProducts();
+      }
+    };
+
+    window.editProduct = async (id, name, price, desc) => {
+      const newName = prompt("Edit Nama", name);
+      const newPrice = prompt("Edit Harga", price);
+      const newDesc = prompt("Edit Deskripsi", desc);
+      if (newName && newPrice) {
+        await updateDoc(doc(db, "products", id), {
+          name: newName,
+          price: parseInt(newPrice),
+          desc: newDesc
+        });
+        loadProducts();
+      }
+    };
+
+    loadProducts();
+
+    // === Transaksi Logic ===
+    const transactionList = document.getElementById("transactionList");
+
+    onValue(dbRef(rtdb, "transactions"), async (snapshot) => {
+      transactionList.innerHTML = "";
+      const data = snapshot.val();
+      if (!data) return;
+
+      for (const id in data) {
+        const trx = data[id];
+        const div = document.createElement("div");
+        div.className = "border p-3 rounded bg-gray-50";
+        const buktiUrl = trx.buktiUrl ? await getDownloadURL(storageRef(storage, trx.buktiUrl)) : "";
+
+        div.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <strong>${trx.nama}</strong> (${trx.nomor})<br>
+              Produk: ${trx.produk} <br>
+              Status: <select onchange="updateStatus('${id}', this.value)" class="border px-2 py-1 rounded mt-1">
+                <option value="Menunggu" ${trx.status === "Menunggu" ? "selected" : ""}>Menunggu</option>
+                <option value="Diproses" ${trx.status === "Diproses" ? "selected" : ""}>Diproses</option>
+                <option value="Selesai" ${trx.status === "Selesai" ? "selected" : ""}>Selesai</option>
+              </select>
+            </div>
+            <div>
+              ${buktiUrl ? `<a href="${buktiUrl}" target="_blank" class="text-blue-600 underline">Lihat Bukti</a>` : "Belum ada bukti"}
+            </div>
+          </div>
+        `;
+        transactionList.appendChild(div);
+      }
+    });
+
+    window.updateStatus = (id, status) => {
+      update(dbRef(rtdb, "transactions/" + id), { status });
+    };
+  </script>
+</body>
+</html>
